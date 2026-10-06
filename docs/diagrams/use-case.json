@@ -1,0 +1,31 @@
+{
+  "system": "Internship Platform",
+  "actors": [
+    { "name": "Student", "side": "left" },
+    { "name": "Company", "side": "left" },
+    { "name": "Department", "side": "right" }
+  ],
+  "use_cases": [
+    {
+      "name": "Browse/Search Internships",
+      "actors": ["Student"]
+    },
+    {
+      "name": "Apply for Internship",
+      "actors": ["Student"],
+      "includes": ["View Internship Details"]
+    },
+    {
+      "name": "Create Internship Position",
+      "actors": ["Company"]
+    },
+    {
+      "name": "Match Students to Internships",
+      "actors": ["Department"],
+      "includes": ["View Internship Details"]
+    },
+    {
+      "name": "View Internship Details"
+    }
+  ]
+}

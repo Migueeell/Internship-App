@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """FastStarter project CLI — stdlib argparse (no extra CLI library).
 
 From the project root (venv active, deps installed; ``.env`` optional — falls back to ``.env.example``):
@@ -23,14 +23,13 @@ def _ensure_models_loaded() -> None:
 
 
 def cmd_init(args: argparse.Namespace) -> None:
-    """Create database tables (drops existing by default) and seed demo users."""
+    """Create database tables (drops existing by default) and seed demo data."""
     from app.config import get_settings
     from app.database import drop_all, ensure_db_and_tables
 
     _ensure_models_loaded()
     if args.drop:
         print("Dropping all tables…")
-        # Drop can fail on a brand-new empty DB; create path still retries.
         try:
             drop_all()
         except Exception as exc:  # noqa: BLE001
@@ -47,47 +46,229 @@ def cmd_init(args: argparse.Namespace) -> None:
 
 
 def cmd_seed(args: argparse.Namespace) -> None:
-    """Insert demo users.
-
-    bob / bobpass       (regular_user)
-    admin / adminpass   (admin)
-    """
+    """Idempotently seed InternHub demo accounts and matching workflow data."""
     from app.database import ensure_db_and_tables, get_cli_session
     from app.repositories.user import UserRepository
-    from app.schemas.user import AdminCreate, RegularUserCreate
+    from app.schemas.user import RegularUserCreate
+    from app.services.auth_service import AuthService
     from app.utilities.security import encrypt_password
 
     _ensure_models_loaded()
     ensure_db_and_tables()
 
     demo_users = [
-        ("bob", "bob@example.com", "bobpass", "regular_user"),
-        ("admin", "admin@example.com", "adminpass", "admin"),
+        ("bob", "bob@example.com", "bobpass", "Bob Student", "student"),
+        ("alice", "alice@example.com", "alicepass", "Alice Student", "student"),
+        ("carol", "carol@example.com", "carolpass", "Carol Student", "student"),
+        ("brightpath", "brightpath@example.com", "brightpathpass", "BrightPath Software", "company"),
+        ("northstar", "northstar@example.com", "northstarpass", "Northstar Analytics", "company"),
+        ("department", "department@example.com", "departmentpass", "Department Administrator", "department"),
     ]
 
     created = 0
     skipped = 0
+    migrated = 0
     with get_cli_session() as session:
         repo = UserRepository(session)
-        for username, email, password, role in demo_users:
-            if repo.get_by_username(username):
+        if AuthService(repo).migrate_legacy_admin_account():
+            migrated += 1
+        for username, email, password, full_name, role in demo_users:
+            existing_user = repo.get_by_username(username)
+            if existing_user:
+                if existing_user.role != role:
+                    raise RuntimeError(
+                        f"Seed account {username!r} has role {existing_user.role!r}; "
+                        f"expected {role!r}."
+                    )
+                if existing_user.full_name != full_name:
+                    existing_user.full_name = full_name
+                    repo.update(existing_user)
                 print(f"  skip  {username} (already exists)")
                 skipped += 1
                 continue
-            payload_cls = AdminCreate if role == "admin" else RegularUserCreate
             repo.create(
-                payload_cls(
+                RegularUserCreate(
                     username=username,
                     email=email,
                     password=encrypt_password(password),
                     role=role,
+                    full_name=full_name,
                 )
             )
             print(f"  create {username} ({role})")
             created += 1
 
-    print(f"Seed done — created {created}, skipped {skipped}.")
-    print("Login with bob/bobpass or admin/adminpass")
+    print(f"Accounts — created {created}, migrated {migrated}, skipped {skipped}.")
+    created_positions, created_applications, created_matches = _seed_workflow_fixtures()
+    print(
+        "Workflow fixtures — "
+        f"positions created {created_positions}, "
+        f"applications created {created_applications}, "
+        f"matches created {created_matches}."
+    )
+    print(
+        "Demo logins: bob/bobpass, alice/alicepass, carol/carolpass, "
+        "brightpath/brightpathpass, northstar/northstarpass, "
+        "department/departmentpass"
+    )
+
+
+def _seed_workflow_fixtures() -> tuple[int, int, int]:
+    from datetime import date, timedelta
+
+    from app.database import get_cli_session
+    from app.models.internship import Application, InternshipPosition, Match
+    from app.repositories.internship import (
+        ApplicationRepository,
+        InternshipPositionRepository,
+        MatchRepository,
+    )
+    from app.repositories.user import UserRepository
+
+    created_positions = 0
+    created_applications = 0
+    created_matches = 0
+    with get_cli_session() as session:
+        user_repo = UserRepository(session)
+        expected_roles = {
+            "bob": "student",
+            "alice": "student",
+            "carol": "student",
+            "brightpath": "company",
+            "northstar": "company",
+            "department": "department",
+        }
+        users = {}
+        for username, expected_role in expected_roles.items():
+            user = user_repo.get_by_username(username)
+            if user is None:
+                raise RuntimeError(f"Seed account {username!r} could not be loaded.")
+            if user.role != expected_role:
+                raise RuntimeError(
+                    f"Seed account {username!r} has role {user.role!r}; "
+                    f"expected {expected_role!r}."
+                )
+            if user.id is None:
+                raise RuntimeError(f"Seed account {username!r} has no database ID.")
+            users[username] = user
+
+        position_repo = InternshipPositionRepository(session)
+        position_specs = [
+            (
+                "brightpath",
+                "Software Engineering Intern",
+                "Build and improve customer-facing web features with the engineering team.",
+                "Python, FastAPI, Git, and clear written communication.",
+                "Port of Spain",
+                45,
+            ),
+            (
+                "brightpath",
+                "UX Design Intern",
+                "Support research, wireframing, and usability reviews for new product work.",
+                "Figma, interaction design, and a portfolio of coursework or projects.",
+                "Hybrid",
+                60,
+            ),
+            (
+                "brightpath",
+                "Product Research Intern",
+                "Summarize user feedback and help the product team evaluate feature ideas.",
+                "Research methods, writing, and spreadsheet skills.",
+                "Remote",
+                50,
+            ),
+            (
+                "northstar",
+                "Data Analyst Intern",
+                "Prepare datasets and communicate findings from operational data.",
+                "SQL, Python, and basic data visualization.",
+                "Chaguanas",
+                40,
+            ),
+            (
+                "northstar",
+                "Quality Assurance Intern",
+                "Help test web releases and document reproducible defects.",
+                "Careful test execution, browser tools, and clear bug reports.",
+                "Hybrid",
+                55,
+            ),
+        ]
+        positions = {}
+        for company_username, title, description, requirements, location, days_until_deadline in position_specs:
+            company = users[company_username]
+            existing_positions = position_repo.list_by_company(company.id)
+            position = next(
+                (item for item in existing_positions if item.title == title),
+                None,
+            )
+            if position is None:
+                position = position_repo.create(
+                    InternshipPosition(
+                        company_id=company.id,
+                        title=title,
+                        description=description,
+                        requirements=requirements,
+                        location=location,
+                        application_deadline=date.today() + timedelta(days=days_until_deadline),
+                        status="open",
+                    )
+                )
+                created_positions += 1
+            if position.id is None:
+                raise RuntimeError(f"Seed position {title!r} has no database ID.")
+            positions[(company_username, title)] = position
+
+        application_repo = ApplicationRepository(session)
+        application_specs = [
+            ("bob_software", "bob", "brightpath", "Software Engineering Intern", None),
+            ("alice_ux", "alice", "brightpath", "UX Design Intern", "approved"),
+            ("carol_data", "carol", "northstar", "Data Analyst Intern", None),
+            ("bob_qa", "bob", "northstar", "Quality Assurance Intern", "approved"),
+            ("alice_product", "alice", "brightpath", "Product Research Intern", "rejected"),
+        ]
+        applications = {}
+        for key, student_username, company_username, title, _ in application_specs:
+            student = users[student_username]
+            position = positions[(company_username, title)]
+            application = application_repo.get_by_student_and_internship(
+                student.id,
+                position.id,
+            )
+            if application is None:
+                application = application_repo.create(
+                    Application(
+                        student_id=student.id,
+                        internship_id=position.id,
+                        resume_path="",
+                        cover_letter="Seeded test application for the matching workflow.",
+                        status="pending",
+                    )
+                )
+                created_applications += 1
+            if application.id is None:
+                raise RuntimeError(f"Seed application {key!r} has no database ID.")
+            applications[key] = application
+
+        match_repo = MatchRepository(session)
+        for key, _, _, _, approval_status in application_specs:
+            if approval_status is None:
+                continue
+            application = applications[key]
+            if match_repo.get_by_application(application.id) is not None:
+                continue
+            match_repo.create(
+                Match(
+                    application_id=application.id,
+                    department_admin_id=users["department"].id,
+                    approval_status=approval_status,
+                    notes=f"Seeded {approval_status} decision for matching tests.",
+                )
+            )
+            created_matches += 1
+
+    return created_positions, created_applications, created_matches
 
 
 def cmd_run(args: argparse.Namespace) -> None:

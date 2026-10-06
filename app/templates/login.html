@@ -1,17 +1,28 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Sign in{% endblock %}
 
 {% block content %}
 <div class="auth-shell">
   <div class="auth-panel">
-    <a class="auth-back" href="{{ url_for('index_view') }}">← Home</a>
-    <div class="brand-wordmark">FastStarter</div>
-    <p class="auth-tagline">Sign in to continue</p>
+    <a class="auth-back" href="{{ url_for('index_view') }}">&larr; Home</a>
+    <div class="auth-brand">
+      {% include "brand-mark.html" %}
+      <div class="brand-wordmark">InternHub</div>
+    </div>
+    <p class="auth-tagline text-center">Sign in to continue</p>
 
     <form method="POST" action="{{ url_for('login_action_ajax') }}">
       <div class="mb-3">
         <label class="form-label" for="username">Username</label>
         <input class="form-control" type="text" id="username" name="username" required autofocus>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="role">Role</label>
+        <select class="form-select" id="role" name="role" required>
+          <option value="student">Student</option>
+          <option value="company">Company</option>
+          <option value="department">Department</option>
+        </select>
       </div>
       <div class="mb-3">
         <label class="form-label" for="password">Password</label>

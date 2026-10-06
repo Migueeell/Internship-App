@@ -1,0 +1,97 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Department Dashboard{% endblock %}
+
+{% block subpage_content %}
+<div class="dashboard-shell">
+  <div class="dashboard-header">
+    <div>
+      <p class="eyebrow">Department review</p>
+      <h1>Candidate matching</h1>
+    </div>
+    <span class="status-pill">{{ user.role|title }} account</span>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3">
+      <div class="summary-panel text-center">
+        <div class="meta-label">Total Students</div>
+        <strong class="fs-3">{{ total_students }}</strong>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="summary-panel text-center">
+        <div class="meta-label">Active Listings</div>
+        <strong class="fs-3">{{ active_listings }}</strong>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="summary-panel text-center">
+        <div class="meta-label">Pending Matches</div>
+        <strong class="fs-3">{{ pending_matches }}</strong>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="summary-panel text-center">
+        <div class="meta-label">Approved Matches</div>
+        <strong class="fs-3">{{ approved_matches }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12">
+      <form class="d-flex align-items-center justify-content-end gap-2 mb-3" method="GET" action="{{ url_for('department_home_view') }}">
+        <label class="form-label mb-0" for="status_filter">Match Status</label>
+        <select class="form-select w-auto" id="status_filter" name="status_filter">
+          <option value="pending" {% if status_filter == "pending" %}selected{% endif %}>Pending Review</option>
+          <option value="approved" {% if status_filter == "approved" %}selected{% endif %}>Approved</option>
+          <option value="rejected" {% if status_filter == "rejected" %}selected{% endif %}>Rejected</option>
+          <option value="all" {% if status_filter == "all" %}selected{% endif %}>All view</option>
+        </select>
+        <button class="btn btn-outline-secondary" type="submit">Filter</button>
+      </form>
+      <div class="panel-grid list-panel">
+        {% for record in records %}
+        <div class="feature-card compact">
+          <div class="card-topline">
+            <span class="tag">{{ record.match_status|title }}</span>
+            <span class="meta">Application #{{ record.application_id }}</span>
+          </div>
+          <h3>{{ record.student_name }}</h3>
+          <p>{{ record.position_title }} &middot; {{ record.company_name }}</p>
+          <details class="mt-2">
+            <summary class="text-primary">View internship details before deciding</summary>
+            <div class="small mt-2">
+              <p><strong>Location:</strong> {{ record.position_location }}</p>
+              <p><strong>Application deadline:</strong> {{ record.application_deadline }}</p>
+              <p><strong>Description:</strong> {{ record.position_description }}</p>
+              <p class="mb-0"><strong>Requirements:</strong> {{ record.position_requirements }}</p>
+            </div>
+          </details>
+          <div class="card-actions">
+            <form method="POST" action="{{ url_for('match_application') }}">
+              <input type="hidden" name="application_id" value="{{ record.application_id }}">
+              <input type="hidden" name="approval_status" value="approved">
+              <button class="btn btn-primary btn-sm" type="submit">Approve Match</button>
+            </form>
+            <form method="POST" action="{{ url_for('match_application') }}">
+              <input type="hidden" name="application_id" value="{{ record.application_id }}">
+              <input type="hidden" name="approval_status" value="rejected">
+              <button class="btn btn-outline-secondary btn-sm" type="submit">Reject Match</button>
+            </form>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          {% if status_filter == "pending" %}
+          There are no applications ready for review.
+          {% else %}
+          No applications match this status filter.
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

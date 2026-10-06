@@ -3,7 +3,7 @@ from fastapi import Depends, HTTPException, status, Request
 import jwt
 from jwt.exceptions import InvalidTokenError
 from app.config import get_settings
-from app.models.user import User
+from app.models.user import USER_ROLES, User
 from app.dependencies.session import SessionDep
 from app.repositories.user import UserRepository
 
@@ -27,7 +27,7 @@ async def get_current_user(request:Request, db:SessionDep)->User:
     repo = UserRepository(db)
     user = repo.get_by_id(user_id)
 
-    if user is None:
+    if user is None or user.role not in USER_ROLES:
         raise credentials_exception
     return user
 
@@ -41,15 +41,32 @@ async def is_logged_in(request: Request, db:SessionDep):
 IsUserLoggedIn = Annotated[bool, Depends(is_logged_in)]
 AuthDep = Annotated[User, Depends(get_current_user)]
 
-async def is_admin(user: User):
-    return user.role == "admin"
-
-async def is_admin_dep(user: AuthDep):
-    if not await is_admin(user):
+async def is_student_dep(user: AuthDep):
+    if user.role != "student":
         raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="You are not authorized to access this page",
-            )
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only students can submit internship applications",
+        )
     return user
 
-AdminDep = Annotated[User, Depends(is_admin_dep)]
+StudentDep = Annotated[User, Depends(is_student_dep)]
+
+async def is_company_dep(user: AuthDep):
+    if user.role != "company":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only company accounts can create internship positions",
+        )
+    return user
+
+CompanyDep = Annotated[User, Depends(is_company_dep)]
+
+async def is_department_dep(user: AuthDep):
+    if user.role != "department":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only department accounts can review matches",
+        )
+    return user
+
+DepartmentDep = Annotated[User, Depends(is_department_dep)]

@@ -1,0 +1,67 @@
+{% extends "authenticated-base.html" %}
+{% block title %}{{ position.title }}{% endblock %}
+
+{% block subpage_content %}
+<div class="dashboard-shell detail-shell">
+  <div class="dashboard-header">
+    <div>
+      <p class="eyebrow">Internship details</p>
+      <h1>{{ position.title }}</h1>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('user_home_view') }}">Back to dashboard</a>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="detail-card">
+        <div class="detail-row">
+          <span class="meta-label">Company</span>
+          <strong>{{ company.full_name or company.username }}</strong>
+        </div>
+        <div class="detail-row">
+          <span class="meta-label">Location</span>
+          <strong>{{ position.location }}</strong>
+        </div>
+        <div class="detail-row">
+          <span class="meta-label">Status</span>
+          <strong>{{ position.status|title }}</strong>
+        </div>
+        <div class="detail-row">
+          <span class="meta-label">Description</span>
+          <p>{{ position.description }}</p>
+        </div>
+        <div class="detail-row">
+          <span class="meta-label">Requirements</span>
+          <p>{{ position.requirements }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="summary-panel">
+        <h2>Apply now</h2>
+        <p class="text-muted">Apply for {{ position.title }} at {{ company.full_name or company.username }}.</p>
+        <form method="POST" action="{{ url_for('apply_to_internship', position_id=position.id) }}" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label" for="applicant_name">Full Name</label>
+            <input class="form-control" type="text" id="applicant_name" value="{{ user.full_name }}" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="applicant_email">Email</label>
+            <input class="form-control" type="email" id="applicant_email" value="{{ user.email }}" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="resume">Resume (PDF)</label>
+            <input class="form-control" type="file" id="resume" name="resume" accept=".pdf" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="cover_letter">Cover letter</label>
+            <textarea class="form-control" id="cover_letter" name="cover_letter" rows="5" required></textarea>
+          </div>
+          <button class="btn btn-primary w-100" type="submit">Submit application</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

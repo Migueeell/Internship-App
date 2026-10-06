@@ -1,0 +1,79 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+
+{% block subpage_content %}
+<div class="dashboard-shell">
+  <div class="dashboard-header">
+    <div>
+      <p class="eyebrow">InternHub</p>
+      <h1>Student dashboard</h1>
+    </div>
+    <span class="status-pill">{{ user.role|title }} account</span>
+  </div>
+
+  <form class="summary-panel mb-4" method="GET" action="{{ url_for('student_home_view') }}">
+    <div class="row g-3 align-items-end">
+      <div class="col-lg-5">
+        <label class="form-label" for="keyword">Keyword</label>
+        <input class="form-control" id="keyword" name="keyword" type="search" value="{{ keyword }}" placeholder="Title, description, or requirements">
+      </div>
+      <div class="col-lg-3">
+        <label class="form-label" for="company">Company</label>
+        <input class="form-control" id="company" name="company" type="search" value="{{ company }}" placeholder="Company name">
+      </div>
+      <div class="col-lg-3">
+        <label class="form-label" for="location">Location</label>
+        <input class="form-control" id="location" name="location" type="search" value="{{ location }}" placeholder="Location">
+      </div>
+      <div class="col-lg-1 d-flex align-items-end">
+        <button class="btn btn-primary w-100" type="submit">Filter</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="panel-grid">
+        {% for listing in positions %}
+        {% set position = listing.position %}
+        <div class="feature-card">
+          <div class="card-topline">
+            <span class="tag">{{ listing.company_name }}</span>
+            <span class="meta">{{ position.location }}</span>
+          </div>
+          <h3>{{ position.title }}</h3>
+          <p>{{ position.description[:180] }}{% if position.description|length > 180 %}...{% endif %}</p>
+          <div class="card-meta">
+            <span>Requirements: {{ position.requirements }}</span>
+          </div>
+          <div class="card-actions">
+            <a class="btn btn-primary btn-sm" href="{{ url_for('internship_detail_view', position_id=position.id) }}">View details</a>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          {% if keyword or company or location %}
+          No open internships match those filters.
+          <a href="{{ url_for('student_home_view') }}">Clear filters</a>
+          {% else %}
+          No internships are currently open.
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="summary-panel">
+        <h2>Application checklist</h2>
+        <ul>
+          <li>Review internship details</li>
+          <li>Prepare your cover letter</li>
+          <li>Submit your resume link</li>
+          <li>Track status in the portal</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

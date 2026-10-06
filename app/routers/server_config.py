@@ -1,4 +1,4 @@
-"""Password-gated ops console at ``/config``.
+﻿"""Password-gated ops console at ``/config``.
 
 Unlock with ``CONFIG_PASSWORD`` from the environment. When that value is empty,
 the routes respond with 404 so the panel stays off by default.
@@ -373,28 +373,39 @@ async def config_clear_cache_action(request: Request):
 def _seed_demo_users() -> tuple[int, int]:
     from app.database import get_cli_session
     from app.repositories.user import UserRepository
-    from app.schemas.user import AdminCreate, RegularUserCreate
+    from app.schemas.user import RegularUserCreate
+    from app.services.auth_service import AuthService
     from app.utilities.security import encrypt_password
 
     demo_users = [
-        ("bob", "bob@example.com", "bobpass", "regular_user"),
-        ("admin", "admin@example.com", "adminpass", "admin"),
+        ("bob", "bob@example.com", "bobpass", "Bob Student", "student"),
+        ("department", "department@example.com", "departmentpass", "Department Administrator", "department"),
     ]
     created = 0
     skipped = 0
     with get_cli_session() as session:
         repo = UserRepository(session)
-        for username, email, password, role in demo_users:
-            if repo.get_by_username(username):
+        AuthService(repo).migrate_legacy_admin_account()
+        for username, email, password, full_name, role in demo_users:
+            existing_user = repo.get_by_username(username)
+            if existing_user:
+                if existing_user.role != role:
+                    raise RuntimeError(
+                        f"Seed account {username!r} has role {existing_user.role!r}; "
+                        f"expected {role!r}."
+                    )
+                if existing_user.full_name != full_name:
+                    existing_user.full_name = full_name
+                    repo.update(existing_user)
                 skipped += 1
                 continue
-            payload_cls = AdminCreate if role == "admin" else RegularUserCreate
             repo.create(
-                payload_cls(
+                RegularUserCreate(
                     username=username,
                     email=email,
                     password=encrypt_password(password),
                     role=role,
+                    full_name=full_name,
                 )
             )
             created += 1

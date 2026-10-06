@@ -1,4 +1,4 @@
-from pwdlib import PasswordHash
+﻿from pwdlib import PasswordHash
 from datetime import timedelta, datetime, timezone
 import jwt
 from app.config import get_settings
@@ -11,7 +11,7 @@ def encrypt_password(password: str):
 
 
 def verify_password(plaintext_password: str, encrypted_password):
-    return password_hash.verify(password=plaintext_password, hash=encrypted_password)
+    return password_hash.verify(plaintext_password, encrypted_password)
 
 
 def create_access_token(

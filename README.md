@@ -84,7 +84,7 @@ Defaults use a local SQLite file (`database.db`). Change `SECRET_KEY` before any
 
 ### 4. Initialise the database (Python CLI)
 
-Creates tables (drops existing by default) **and seeds demo users**:
+Creates tables (drops existing by default) and seeds six demo accounts, five open internship positions, five applications, and three match decisions:
 
 ```bash
 python manage.py init
@@ -92,17 +92,23 @@ python manage.py init
 
 | Username | Password    | Role         |
 |----------|-------------|--------------|
-| `bob`    | `bobpass`   | regular_user |
-| `admin`  | `adminpass` | admin        |
+| `bob`        | `bobpass`        | Student |
+| `alice`      | `alicepass`      | Student |
+| `carol`      | `carolpass`      | Student |
+| `brightpath` | `brightpathpass` | Company |
+| `northstar`  | `northstarpass`  | Company |
+| `department` | `departmentpass` | Department |
+
+On a fresh initialization, the fixtures contain two pending/unmatched applications, two approved matches, and one rejected match. All five applications retain `APPLICATION.status = pending`; decisions are stored in `MATCH.approval_status`.
 
 Flags:
 
 ```bash
 python manage.py init --no-drop   # create/seed without dropping
-python manage.py init --no-seed   # tables only (skip demo users)
+python manage.py init --no-seed   # tables only (skip demo data)
 ```
 
-Seeding skips usernames that already exist. Add more rows in `cmd_seed` in `app/cli.py`. `python manage.py seed` still works if you only want to (re)insert demo users.
+Seeding skips matching demo accounts, positions, applications, and matches, and does not overwrite existing decisions. An earlier `admin/adminpass` demo account is converted in place to `department/departmentpass`, preserving its match references. Other conflicting demo usernames stop seeding with an error. This makes `--no-drop` safe to repeat. Add fixtures in `cmd_seed` and `_seed_workflow_fixtures` in `app/cli.py`. `python manage.py seed` inserts demo accounts and workflow data without dropping tables.
 
 ```bash
 python manage.py users

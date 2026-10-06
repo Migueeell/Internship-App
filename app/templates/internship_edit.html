@@ -1,0 +1,44 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Manage {{ position.title }}{% endblock %}
+
+{% block subpage_content %}
+<div class="dashboard-shell">
+  <div class="dashboard-header">
+    <div>
+      <p class="eyebrow">Manage internship</p>
+      <h1>Edit position</h1>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('company_home_view') }}">Back to listings</a>
+  </div>
+
+  <div class="summary-panel">
+    <form method="POST" action="{{ url_for('update_internship_position', position_id=position.id) }}">
+      <div class="mb-3">
+        <label class="form-label" for="title">Position Title</label>
+        <input class="form-control" id="title" name="title" value="{{ position.title }}" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="company_name">Company/Department</label>
+        <input class="form-control" id="company_name" value="{{ user.full_name or user.username }}" readonly>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="location">Location</label>
+        <input class="form-control" id="location" name="location" value="{{ position.location }}" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="description">Job Description &amp; Responsibilities</label>
+        <textarea class="form-control" id="description" name="description" rows="4" required>{{ position.description }}</textarea>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="requirements">Requirements</label>
+        <textarea class="form-control" id="requirements" name="requirements" rows="3" required>{{ position.requirements }}</textarea>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="application_deadline">Application Deadline</label>
+        <input class="form-control" type="date" id="application_deadline" name="application_deadline" value="{{ position.application_deadline.isoformat() }}" required>
+      </div>
+      <button class="btn btn-primary" type="submit">Save Changes</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

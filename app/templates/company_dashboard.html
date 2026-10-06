@@ -1,0 +1,78 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Company Dashboard{% endblock %}
+
+{% block subpage_content %}
+<div class="dashboard-shell">
+  <div class="dashboard-header">
+    <div>
+      <p class="eyebrow">Company portal</p>
+      <h1>Hire talent</h1>
+    </div>
+    <span class="status-pill">{{ user.role|title }} account</span>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="panel-grid">
+        {% for position in positions %}
+        <div class="feature-card compact">
+          <div class="card-topline">
+            <span class="tag">{{ position.status|title }}</span>
+            <span class="meta">{{ position.location }}</span>
+          </div>
+          <h3>{{ position.title }}</h3>
+          <p>{{ position.description }}</p>
+          <div class="card-meta">
+            <span>{{ position.requirements }}</span>
+          </div>
+          <p class="meta"><strong>Application deadline:</strong> {{ position.application_deadline }}</p>
+          <div class="card-actions">
+            <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('edit_internship_position', position_id=position.id) }}">Manage/Edit</a>
+            {% if position.status == "open" %}
+            <form method="POST" action="{{ url_for('close_internship_position', position_id=position.id) }}" onsubmit="return confirm('Close this internship listing?');">
+              <button class="btn btn-outline-secondary btn-sm" type="submit">Close Listing</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state">You have not posted any internships yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="summary-panel">
+        <h2>Post a new internship</h2>
+        <form method="POST" action="{{ url_for('create_internship_position') }}">
+          <div class="mb-3">
+            <label class="form-label" for="title">Position Title</label>
+            <input class="form-control" id="title" name="title" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="company_name">Company/Department</label>
+            <input class="form-control" id="company_name" value="{{ user.full_name or user.username }}" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="location">Location</label>
+            <input class="form-control" id="location" name="location" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="description">Job Description &amp; Responsibilities</label>
+            <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="requirements">Requirements</label>
+            <textarea class="form-control" id="requirements" name="requirements" rows="3" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="application_deadline">Application Deadline</label>
+            <input class="form-control" type="date" id="application_deadline" name="application_deadline" required>
+          </div>
+          <button class="btn btn-primary w-100" type="submit">Publish internship</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,21 +1,59 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
+from typing import Literal
+
+from fastapi import Form, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi import status
+
+from app.dependencies.auth import DepartmentDep
 from app.dependencies.session import SessionDep
-from app.dependencies.auth import AdminDep, IsUserLoggedIn, get_current_user, is_admin
+from app.repositories.internship import ApplicationRepository, InternshipPositionRepository, MatchRepository
+from app.repositories.user import UserRepository
+from app.services.internship_service import InternshipService
+from app.utilities.flash import flash
 from . import router, templates
 
 
-@router.get("/admin", response_class=HTMLResponse)
-async def admin_home_view(
+@router.get("/department", response_class=HTMLResponse, name="department_home_view")
+async def department_home_view(
     request: Request,
-    user: AdminDep,
-    db:SessionDep
+    user: DepartmentDep,
+    db: SessionDep,
+    status_filter: Literal["pending", "approved", "rejected", "all"] = Query(default="pending"),
 ):
-    return templates.TemplateResponse(
-        request=request, 
-        name="admin.html",
-        context={
-            "user": user
-        }
+    service = InternshipService(
+        position_repo=InternshipPositionRepository(db),
+        application_repo=ApplicationRepository(db),
+        match_repo=MatchRepository(db),
+        user_repo=UserRepository(db),
     )
+    dashboard = service.get_match_dashboard(status_filter)
+    return templates.TemplateResponse(
+        request=request,
+        name="department_dashboard.html",
+        context={
+            "user": user,
+            **dashboard,
+        },
+    )
+
+@router.post("/department/match", response_class=HTMLResponse, name="match_application")
+async def match_application(
+    request: Request,
+    user: DepartmentDep,
+    db: SessionDep,
+    application_id: int = Form(...),
+    approval_status: str = Form(...),
+    notes: str = Form(default=""),
+):
+    service = InternshipService(
+        position_repo=InternshipPositionRepository(db),
+        application_repo=ApplicationRepository(db),
+        match_repo=MatchRepository(db),
+        user_repo=UserRepository(db),
+    )
+    try:
+        service.match_application(application_id, user.id, approval_status, notes)
+    except ValueError as e:
+        flash(request, str(e), "danger")
+        return RedirectResponse(request.url_for("department_home_view"), status_code=status.HTTP_303_SEE_OTHER)
+    flash(request, "Match decision recorded.", "success")
+    return RedirectResponse(request.url_for("department_home_view"), status_code=status.HTTP_303_SEE_OTHER)
